@@ -1,3 +1,7 @@
+/*What to replace here?????
+ *are the questions to be asked in class
+*/
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -91,6 +95,16 @@ int echo(char **tokens, int tokenNo)
 	// 0 for loop did not end
 }
 
+unsigned int stoi(char *token)
+{
+	unsigned int unsInt = 0;
+	for (int i = 0; i < strlen(token); i++)
+	{
+		unsInt = unsInt * 10 + (token[i] - '0');
+	}
+	return unsInt;
+}
+
 int main(int argc, char *argv[])
 {
 	char line[MAX_INPUT_SIZE];
@@ -145,8 +159,20 @@ int main(int argc, char *argv[])
 				if (i == -1)
 				{
 					printf("Did not find \" \n");
+					/*What to replace here?????*/
 					break;
 				}
+			}
+			if (strcmp(tokens[i], "sleep") == 0)
+			{
+				int sleepNo = stoi(tokens[i + 1]);
+				if (sleepNo > MAX_NUM_TOKENS)
+				{
+					printf("Sleeping cannot be done for such long period");
+					/*What to replace here?????*/
+					break;
+				}
+				sleep(sleepNo);
 			}
 		}
 

@@ -1,1 +1,1 @@
-echo "hello world" f "start again"
+echo "hello world" sleep 5

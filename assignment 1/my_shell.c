@@ -1,5 +1,5 @@
 /*What to replace here?????
- *are the questions to be asked in class
+ *questions to be asked in class have '???'
 */
 
 #include <stdio.h>
@@ -8,13 +8,124 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <dirent.h>
+/*Can we use dirent.h ????*/
+
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
-/* Splits the string by space and returns the array of tokens
-*
-*/
+char **tokenize(char *line);
+int echo(char **tokens, int tokenNo);
+unsigned int stoi(char *token);
+int currentwd();
+void ls();
+
+int main(int argc, char *argv[])
+{
+	char line[MAX_INPUT_SIZE];
+	char **tokens;
+	int i;
+
+	FILE *fp;
+	if (argc == 2)
+	{
+		fp = fopen(argv[1], "r");
+		if (fp < 0)
+		{
+			printf("File doesn't exists.");
+			return -1;
+		}
+	}
+
+	while (1)
+	{
+		/* BEGIN: TAKING INPUT */
+		bzero(line, sizeof(line));
+		if (argc == 2)
+		{ // batch mode
+			if (fgets(line, sizeof(line), fp) == NULL)
+			{ // file reading finished
+				break;
+			}
+			line[strlen(line) - 1] = '\0';
+		}
+		else
+		{ // interactive mode
+			printf("$ ");
+			scanf("%[^\n]", line);
+			getchar();
+		}
+		printf("Command entered: %s\n", line);
+		/* END: TAKING INPUT */
+
+		line[strlen(line)] = '\n'; //terminate with new line
+		tokens = tokenize(line);
+
+		//do whatever you want with the commands, here we just print them
+
+		for (i = 0; tokens[i] != NULL; i++)
+		{
+			printf("found token %s\n", tokens[i]);
+
+			if (strcmp(tokens[i], "echo") == 0)
+			{
+				i = echo(tokens, i);
+				// i is the token number at which the echo trails off
+				if (i == -1)
+				{
+					printf("Did not find \" \n");
+					/*What to replace here?????*/
+					break;
+				}
+			}
+
+			if (strcmp(tokens[i], "sleep") == 0)
+			{
+				int sleepNo = stoi(tokens[i + 1]);
+				if (sleepNo > MAX_NUM_TOKENS)
+				{
+					printf("Sleeping cannot be done for such long period \n");
+					/*What to replace here?????*/
+					break;
+				}
+				sleep(sleepNo);
+			}
+
+			if (strcmp(tokens[i], "cd") == 0)
+			{
+				i++;
+				if (chdir(tokens[i]) == -1)
+				/*We just have to change directory in our custom shell right!??? */
+				{
+					printf("no such directory \n");
+					/*What to replace here????? */
+				}
+				else
+				{
+					currentwd();
+					/*What to replace here????? */
+				};
+			}
+
+			if (strcmp(tokens[i], "ls") == 0)
+			{
+				ls();
+				/*Work on this ????*/
+			}
+		}
+
+		// Freeing the allocated memory
+		for (i = 0; tokens[i] != NULL; i++)
+		{
+			free(tokens[i]);
+		}
+		free(tokens);
+	}
+	return 0;
+}
+
+/* Splits the string by space and returns the array of tokens */
 char **tokenize(char *line)
 {
 	char **tokens = (char **)malloc(MAX_NUM_TOKENS * sizeof(char *));
@@ -105,83 +216,41 @@ unsigned int stoi(char *token)
 	return unsInt;
 }
 
-int main(int argc, char *argv[])
+// function to check the current working directory
+int currentwd()
 {
-	char line[MAX_INPUT_SIZE];
-	char **tokens;
-	int i;
-
-	FILE *fp;
-	if (argc == 2)
+	char cwd[MAX_INPUT_SIZE];
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
 	{
-		fp = fopen(argv[1], "r");
-		if (fp < 0)
-		{
-			printf("File doesn't exists.");
-			return -1;
-		}
+		printf("Current working dir: %s\n", cwd);
 	}
-
-	while (1)
+	else
 	{
-		/* BEGIN: TAKING INPUT */
-		bzero(line, sizeof(line));
-		if (argc == 2)
-		{ // batch mode
-			if (fgets(line, sizeof(line), fp) == NULL)
-			{ // file reading finished
-				break;
-			}
-			line[strlen(line) - 1] = '\0';
-		}
-		else
-		{ // interactive mode
-			printf("$ ");
-			scanf("%[^\n]", line);
-			getchar();
-		}
-		printf("Command entered: %s\n", line);
-		/* END: TAKING INPUT */
-
-		line[strlen(line)] = '\n'; //terminate with new line
-		tokens = tokenize(line);
-
-		//do whatever you want with the commands, here we just print them
-
-		for (i = 0; tokens[i] != NULL; i++)
-		{
-			printf("found token %s\n", tokens[i]);
-
-			if (strcmp(tokens[i], "echo") == 0)
-			{
-				i = echo(tokens, i);
-				// i is the token number at which the echo trails off
-				if (i == -1)
-				{
-					printf("Did not find \" \n");
-					/*What to replace here?????*/
-					break;
-				}
-			}
-			if (strcmp(tokens[i], "sleep") == 0)
-			{
-				int sleepNo = stoi(tokens[i + 1]);
-				if (sleepNo > MAX_NUM_TOKENS)
-				{
-					printf("Sleeping cannot be done for such long period");
-					/*What to replace here?????*/
-					break;
-				}
-				sleep(sleepNo);
-			}
-		}
-
-		// Freeing the allocated memory
-		for (i = 0; tokens[i] != NULL; i++)
-		{
-			free(tokens[i]);
-		}
-		free(tokens);
+		perror("getcwd() error");
+		return 1;
 	}
 	return 0;
+}
+
+void ls()
+{
+	struct dirent *de; // Pointer for directory entry
+
+	// opendir() returns a pointer of DIR type.
+	DIR *dr = opendir(".");
+
+	if (dr == NULL) // opendir returns NULL if couldn't open directory
+	{
+		printf("Could not open current directory");
+		return;
+	}
+
+	// Refer http://pubs.opengroup.org/onlinepubs/7990989775/xsh/readdir.html
+	// for readdir()
+	while ((de = readdir(dr)) != NULL)
+		printf("%s\n", de->d_name);
+
+	closedir(dr);
+	printf("is using direct.h header okay??? \n");
+	return;
 }

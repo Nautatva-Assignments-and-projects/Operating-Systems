@@ -74,31 +74,35 @@ int main(int argc, char *argv[])
 				// i is the token number at which the echo trails off
 				if (i == -1)
 				{
-					printf("Did not find \" \n");
+
+					printf("Shell: Incorrect command \n");
+					// perror("Did not find \" \n");
 					/*What to replace here?????*/
 					break;
 				}
 			}
 
-			if (strcmp(tokens[i], "sleep") == 0)
+			else if (strcmp(tokens[i], "sleep") == 0)
 			{
 				int sleepNo = stoi(tokens[i + 1]);
 				if (sleepNo > MAX_NUM_TOKENS)
 				{
-					printf("Sleeping cannot be done for such long period \n");
+					printf("Shell: Incorrect command \n");
+					// perror("Sleeping cannot be done for such long period \n");
 					/*What to replace here?????*/
 					break;
 				}
 				sleep(sleepNo);
 			}
 
-			if (strcmp(tokens[i], "cd") == 0)
+			else if (strcmp(tokens[i], "cd") == 0)
 			{
 				i++;
 				if (chdir(tokens[i]) == -1)
 				/*We just have to change directory in our custom shell right!??? */
 				{
-					printf("no such directory \n");
+					printf("Shell: Incorrect command \n");
+					// perror("no such directory \n");
 					/*What to replace here????? */
 				}
 				else
@@ -108,10 +112,14 @@ int main(int argc, char *argv[])
 				};
 			}
 
-			if (strcmp(tokens[i], "ls") == 0)
+			else if (strcmp(tokens[i], "ls") == 0)
 			{
 				ls();
 				/*Work on this ????*/
+			}
+			else
+			{
+				printf("Shell: Incorrect command \n");
 			}
 		}
 
@@ -241,7 +249,9 @@ void ls()
 
 	if (dr == NULL) // opendir returns NULL if couldn't open directory
 	{
-		printf("Could not open current directory");
+
+		printf("Shell: Incorrect command \n");
+		// printf("Could not open current directory");
 		return;
 	}
 

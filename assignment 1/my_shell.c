@@ -11,6 +11,10 @@
 #include <dirent.h>
 /*Can we use dirent.h ????*/
 
+#include <fcntl.h>
+/* Again.... Can we use fcntl.h ???? */
+// cat not implemented
+
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
@@ -116,6 +120,10 @@ int main(int argc, char *argv[])
 			{
 				ls();
 				/*Work on this ????*/
+			}
+			else if (strcmp(tokens[i], "pwd") == 0)
+			{
+				currentwd();
 			}
 			else
 			{
@@ -230,7 +238,7 @@ int currentwd()
 	char cwd[MAX_INPUT_SIZE];
 	if (getcwd(cwd, sizeof(cwd)) != NULL)
 	{
-		printf("Current working dir: %s\n", cwd);
+		printf("%s\n", cwd);
 	}
 	else
 	{

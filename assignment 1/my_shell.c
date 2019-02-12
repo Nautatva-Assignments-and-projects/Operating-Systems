@@ -19,126 +19,15 @@
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
-char **tokenize(char *line);
-int echo(char **tokens, int tokenNo);
-unsigned int stoi(char *token);
-int currentwd();
-void ls();
-
-int main(int argc, char *argv[])
+// Helper functions
+unsigned int stoi(char *token)
 {
-	char line[MAX_INPUT_SIZE];
-	char **tokens;
-	int i;
-
-	FILE *fp;
-	if (argc == 2)
+	unsigned int unsInt = 0;
+	for (int i = 0; i < strlen(token); i++)
 	{
-		fp = fopen(argv[1], "r");
-		if (fp < 0)
-		{
-			printf("File doesn't exists.");
-			return -1;
-		}
+		unsInt = unsInt * 10 + (token[i] - '0');
 	}
-
-	while (1)
-	{
-		/* BEGIN: TAKING INPUT */
-		bzero(line, sizeof(line));
-		if (argc == 2)
-		{ // batch mode
-			if (fgets(line, sizeof(line), fp) == NULL)
-			{ // file reading finished
-				break;
-			}
-			line[strlen(line) - 1] = '\0';
-		}
-		else
-		{ // interactive mode
-			printf("$ ");
-			scanf("%[^\n]", line);
-			getchar();
-		}
-		printf("Command entered: %s\n", line);
-		/* END: TAKING INPUT */
-
-		line[strlen(line)] = '\n'; //terminate with new line
-		tokens = tokenize(line);
-
-		//do whatever you want with the commands, here we just print them
-
-		for (i = 0; tokens[i] != NULL; i++)
-		{
-			printf("found token %s\n", tokens[i]);
-
-			if (strcmp(tokens[i], "echo") == 0)
-			{
-				i = echo(tokens, i);
-				// i is the token number at which the echo trails off
-				if (i == -1)
-				{
-
-					printf("Shell: Incorrect command \n");
-					// perror("Did not find \" \n");
-					/*What to replace here?????*/
-					break;
-				}
-			}
-
-			else if (strcmp(tokens[i], "sleep") == 0)
-			{
-				int sleepNo = stoi(tokens[i + 1]);
-				if (sleepNo > MAX_NUM_TOKENS)
-				{
-					printf("Shell: Incorrect command \n");
-					// perror("Sleeping cannot be done for such long period \n");
-					/*What to replace here?????*/
-					break;
-				}
-				sleep(sleepNo);
-			}
-
-			else if (strcmp(tokens[i], "cd") == 0)
-			{
-				i++;
-				if (chdir(tokens[i]) == -1)
-				/*We just have to change directory in our custom shell right!??? */
-				{
-					printf("Shell: Incorrect command \n");
-					// perror("no such directory \n");
-					/*What to replace here????? */
-				}
-				else
-				{
-					currentwd();
-					/*What to replace here????? */
-				};
-			}
-
-			else if (strcmp(tokens[i], "ls") == 0)
-			{
-				ls();
-				/*Work on this ????*/
-			}
-			else if (strcmp(tokens[i], "pwd") == 0)
-			{
-				currentwd();
-			}
-			else
-			{
-				printf("Shell: Incorrect command \n");
-			}
-		}
-
-		// Freeing the allocated memory
-		for (i = 0; tokens[i] != NULL; i++)
-		{
-			free(tokens[i]);
-		}
-		free(tokens);
-	}
-	return 0;
+	return unsInt;
 }
 
 /* Splits the string by space and returns the array of tokens */
@@ -174,66 +63,161 @@ char **tokenize(char *line)
 	return tokens;
 }
 
-int echo(char **tokens, int tokenNo)
-{
+//
 
-	int start = 0;
-	int stop = 0;
-	// tokenNo contains the word echo;
-	for (int i = tokenNo + 1; tokens[i] != NULL; i++)
+int echo(char **tokens, int tokenNo);
+int pwd();
+void ls();
+int cd();
+
+int main(int argc, char *argv[])
+{
+	char line[MAX_INPUT_SIZE];
+	char **tokens;
+	int i;
+
+	FILE *fp;
+	if (argc == 2)
 	{
-		char *currentWord = tokens[i];
-		for (int j = 0; j < strlen(currentWord); j++)
+		fp = fopen(argv[1], "r");
+		if (fp < 0)
 		{
-			char readchar = currentWord[j];
-			// Handling encounter with "
-			if (readchar == '"')
-			{
-				// first encounter
-				if (start == 0)
-				{
-					start = 1;
-					continue;
-				}
-				// last encounter
-				else
-				{
-					stop = 1;
-					printf("\n");
-					return i;
-					// i returns the word index last echoed
-				}
-			}
-			// if immediately, we dont find ", give error
-			else if (start == 0)
-			{
-				return -1;
-				// error for did not find "
-			}
-			else
-			{
-				printf("%c", readchar);
-			}
+			printf("File doesn't exists.");
+			return -1;
 		}
-		printf(" ");
 	}
 
+	while (1)
+	{
+		/* BEGIN: TAKING INPUT */
+		bzero(line, sizeof(line));
+		if(argc == 2) { // batch mode
+			if(fgets(line, sizeof(line), fp) == NULL) { // file reading finished
+				break;	
+			}
+			line[strlen(line) - 1] = '\0';
+		} else { // interactive mode
+			printf("$ ");
+			scanf("%[^\n]", line);
+			getchar();
+		}
+		printf("Command entered: %s\n", line);
+		/* END: TAKING INPUT */
+
+		line[strlen(line)] = '\n'; //terminate with new line
+		tokens = tokenize(line);
+   
+		//do whatever you want with the commands, here we just print them
+
+		for (i = 0; tokens[i] != NULL; i++)
+		{
+			printf("found token %s\n", tokens[i]);
+
+			// if (strcmp(tokens[i], "sleep") == 0)
+			// {
+			// 	int sleepNo = stoi(tokens[i + 1]);
+			// 	if (sleepNo > MAX_NUM_TOKENS)
+			// 	{
+			// 		printf("Shell: Incorrect command \n");
+			// 		// perror("Sleeping cannot be done for such long period \n");
+			// 		/*What to replace here?????*/
+			// 		break;
+			// 	}
+			// 	sleep(sleepNo);
+			// }
+
+			// else if (strcmp(tokens[i], "cd") == 0)
+			// {
+			// 	i = cd(tokens[i], i);
+			// }
+			// else if (strcmp(tokens[i], "echo") == 0)
+			// {
+			// 	i = echo(tokens, i);
+			// }
+			// else
+			// {
+			// 	printf("Shell: Incorrect command \n");
+			// }
+		}
+
+		// Freeing the allocated memory
+		for (i = 0; tokens[i] != NULL; i++)
+		{
+			free(tokens[i]);
+		}
+		free(tokens);
+	}
 	return 0;
-	// 0 for loop did not end
 }
 
-unsigned int stoi(char *token)
+int echo(char **tokens, int tokenNo)
 {
-	unsigned int unsInt = 0;
-	for (int i = 0; i < strlen(token); i++)
+	pid_t pid, wpid;
+	int status;
+	int i;
+
+	pid = fork();
+	if (pid == 0)
 	{
-		unsInt = unsInt * 10 + (token[i] - '0');
+		int start = 0;
+		int stop = 0;
+		// tokenNo contains the word echo;
+		for (i = tokenNo + 1; tokens[i] != NULL; i++)
+		{
+			char *currentWord = tokens[i];
+			for (int j = 0; j < strlen(currentWord); j++)
+			{
+				char readchar = currentWord[j];
+				// Handling encounter with "
+				if (readchar == '"')
+				{
+					// first encounter
+					if (start == 0)
+					{
+						start = 1;
+						continue;
+					}
+					// last encounter
+					else
+					{
+						stop = 1;
+						printf("\n");
+						exit(EXIT_SUCCESS);
+						// i returns the word index last echoed
+					}
+				}
+				// if immediately, we dont find ", give error
+				else if (start == 0)
+				{
+					exit(EXIT_FAILURE);
+					// error for did not find "
+				}
+				else
+				{
+					printf("%c", readchar);
+				}
+			}
+			printf(" ");
+		}
+		// did not end with "
+		exit(EXIT_FAILURE);
 	}
-	return unsInt;
+	else if (pid < 0)
+	{
+		perror("error forking");
+	}
+	else
+	{
+		do
+		{
+			wpid = waitpid(pid, &status, WUNTRACED);
+		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+	}
+	return i;
 }
 
 // function to check the current working directory
-int currentwd()
+int pwd()
 {
 	char cwd[MAX_INPUT_SIZE];
 	if (getcwd(cwd, sizeof(cwd)) != NULL)
@@ -243,7 +227,7 @@ int currentwd()
 	else
 	{
 		perror("getcwd() error");
-		return 1;
+		return -1;
 	}
 	return 0;
 }
@@ -271,4 +255,22 @@ void ls()
 	closedir(dr);
 	printf("is using direct.h header okay??? \n");
 	return;
+}
+
+int cd(char **tokens, int i)
+{
+
+	if (chdir(tokens[i]) == -1)
+	{
+		printf("Shell: Incorrect command \n");
+		// perror("no such directory \n");
+		/*What to replace here????? */
+	}
+	else
+	{
+		// success
+		pwd();
+		/*What to replace here????? */
+	}
+	return i + 2;
 }

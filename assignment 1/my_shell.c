@@ -69,6 +69,7 @@ int echo(char **tokens, int tokenNo);
 int pwd();
 void ls();
 int cd();
+void my_sleep(char **tokens, int i);
 
 int main(int argc, char *argv[])
 {
@@ -77,7 +78,7 @@ int main(int argc, char *argv[])
 	int i;
 
 	FILE *fp;
-	if (argc == 2)
+	if (argc >= 2)
 	{
 		fp = fopen(argv[1], "r");
 		if (fp < 0)
@@ -86,17 +87,21 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-
-	while (1)
+	int count = 8;
+	while (count--)
 	{
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
-		if(argc == 2) { // batch mode
-			if(fgets(line, sizeof(line), fp) == NULL) { // file reading finished
-				break;	
+		if (argc == 2)
+		{ // batch mode
+			if (fgets(line, sizeof(line), fp) == NULL)
+			{ // file reading finished
+				break;
 			}
 			line[strlen(line) - 1] = '\0';
-		} else { // interactive mode
+		}
+		else
+		{ // interactive mode
 			printf("$ ");
 			scanf("%[^\n]", line);
 			getchar();
@@ -106,38 +111,38 @@ int main(int argc, char *argv[])
 
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line);
-   
+
 		//do whatever you want with the commands, here we just print them
 
 		for (i = 0; tokens[i] != NULL; i++)
 		{
 			printf("found token %s\n", tokens[i]);
 
-			// if (strcmp(tokens[i], "sleep") == 0)
-			// {
-			// 	int sleepNo = stoi(tokens[i + 1]);
-			// 	if (sleepNo > MAX_NUM_TOKENS)
-			// 	{
-			// 		printf("Shell: Incorrect command \n");
-			// 		// perror("Sleeping cannot be done for such long period \n");
-			// 		/*What to replace here?????*/
-			// 		break;
-			// 	}
-			// 	sleep(sleepNo);
-			// }
-
-			// else if (strcmp(tokens[i], "cd") == 0)
-			// {
-			// 	i = cd(tokens[i], i);
-			// }
-			// else if (strcmp(tokens[i], "echo") == 0)
-			// {
-			// 	i = echo(tokens, i);
-			// }
-			// else
-			// {
-			// 	printf("Shell: Incorrect command \n");
-			// }
+			if (strcmp(tokens[i], "cd") == 0)
+			{
+				i = cd(tokens[i], i);
+			}
+			else if (strcmp(tokens[i], "echo") == 0)
+			{
+				i = echo(tokens, i);
+			}
+			if (strcmp(tokens[i], "sleep") == 0)
+			{
+				i++;
+				// my_sleep(tokens, i);
+				int sleepNo = stoi(tokens[i]);
+				if (sleepNo > MAX_NUM_TOKENS)
+				{
+					printf("Shell: Incorrect command \n");
+					// perror("Sleeping cannot be done for such long period \n");
+					/*What to replace here?????*/
+				}
+				sleep(sleepNo);
+			}
+			else
+			{
+				printf("Shell: Incorrect command \n");
+			}
 		}
 
 		// Freeing the allocated memory
@@ -199,6 +204,7 @@ int echo(char **tokens, int tokenNo)
 			}
 			printf(" ");
 		}
+		printf("\n");
 		// did not end with "
 		exit(EXIT_FAILURE);
 	}
@@ -208,10 +214,11 @@ int echo(char **tokens, int tokenNo)
 	}
 	else
 	{
-		do
-		{
-			wpid = waitpid(pid, &status, WUNTRACED);
-		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+		printf("%d \n", pid);
+		// do
+		// {
+		// 	wpid = waitpid(pid, &status, WUNTRACED);
+		// } while (!WIFEXITED(status) && !WIFSIGNALED(status));
 	}
 	return i;
 }
@@ -274,3 +281,33 @@ int cd(char **tokens, int i)
 	}
 	return i + 2;
 }
+
+// void my_sleep(char **tokens, int i)
+// {
+// 	pid_t pid, wpid;
+// 	int status;
+
+// 	pid = fork();
+// 	if (pid == 0)
+// 	{
+// 		int sleepNo = stoi(tokens[i + 1]);
+// 		if (sleepNo > MAX_NUM_TOKENS)
+// 		{
+// 			printf("Shell: Incorrect command \n");
+// 			// perror("Sleeping cannot be done for such long period \n");
+// 			/*What to replace here?????*/
+// 		}
+// 		sleep(sleepNo);
+// 		exit(EXIT_FAILURE);
+// 	}
+// 	else if (pid)
+// 	{
+// 		wpid = waitpid(pid, &status, 0);
+// 		printf("%d reaped \n", wpid);
+// 	}
+
+// 	else if (pid < 0)
+// 	{
+// 		perror("error forking");
+// 	}
+// }

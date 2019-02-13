@@ -8,13 +8,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <dirent.h>
-/*Can we use dirent.h ????*/
-
-#include <fcntl.h>
-/* Again.... Can we use fcntl.h ???? */
-// cat not implemented
-
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
@@ -65,7 +58,7 @@ char **tokenize(char *line)
 
 char *processecho(char **, int);
 void pwd();
-void exec(char *, char **, int);
+int exec(char *, char **, int);
 
 void my_sleep(char **tokens, int i);
 
@@ -105,7 +98,7 @@ int main(int argc, char *argv[])
 			scanf("%[^\n]", line);
 			getchar();
 		}
-		printf("Command entered: %s\n", line);
+		// printf("Command entered: %s\n", line);
 		/* END: TAKING INPUT */
 
 		line[strlen(line)] = '\n'; //terminate with new line
@@ -115,39 +108,24 @@ int main(int argc, char *argv[])
 
 		for (i = 0; tokens[i] != NULL; i++)
 		{
-			printf("found token %s\n", tokens[i]);
+			// printf("found token %s\n", tokens[i]);
 
 			if (strcmp(tokens[i], "cd") == 0)
 			{ // done
 				chdir(tokens[++i]);
 			}
 
-			else if (strcmp(tokens[i], "pwd") == 0)
-			{ // done
-				exec("pwd", NULL, 0);
-			}
-
-			else if (strcmp(tokens[i], "ls") == 0)
+			else if (strcmp(tokens[i], "exit") == 0)
 			{ //done
-				if (tokens[i++] != NULL)
-				{
-					char *array[1] = {tokens[i]};
-					exec("ls", array, 1);
-				}
-				else
-				{
-					exec("ls", NULL, 0);
-				}
-			}
-
-			else if (strcmp(tokens[i], "echo") == 0)
-			{ //done
-				char *string = processecho(tokens, i);
-				char *array[1] = {string};
-				exec("echo", array, 1);
+				exit = 1;
 				break;
 			}
 
+			//
+
+			//
+
+			// problem
 			else if (strcmp(tokens[i], "sleep") == 0)
 			{
 				i++;
@@ -156,15 +134,59 @@ int main(int argc, char *argv[])
 				{
 					printf("Shell: Incorrect command \n");
 				}
-				sleep(sleepNo); //think so left
+				sleep(sleepNo);
 			}
 
-			else if (strcmp(tokens[i], "exit") == 0)
+			//
+
+			//
+
+			// exec waale commands
+			else if (strcmp(tokens[i], "pwd") == 0)
+			{ // done
+				exec("pwd", NULL, 0);
+			}
+
+			else if (strcmp(tokens[i], "date") == 0)
+			{ // done
+				exec("date", NULL, 0);
+			}
+
+			else if (strcmp(tokens[i], "ps") == 0)
+			{ // done
+				exec("ps", NULL, 0);
+			}
+
+			else if (strcmp(tokens[i], "ls") == 0)
 			{ //done
-				exit = 1;
+				if (tokens[i++] != NULL)
+				{
+					char *array[1] = {tokens[i]};
+					i += exec("ls", array, 1);
+				}
+				else
+				{
+					exec("ls", NULL, 0);
+				}
+			}
+
+			else if (strcmp(tokens[i], "cat") == 0)
+			{ //done
+				if (tokens[i++] != NULL)
+				{
+					char *array[1] = {tokens[i]};
+					i += exec("cat", array, 1);
+				}
+			}
+
+			else if (strcmp(tokens[i], "echo") == 0)
+			{ //done - check for size though
+				char *string = processecho(tokens, i);
+				char *array[1] = {string};
+				exec("echo", array, 1);
 				break;
 			}
-			
+
 			else
 			{
 				printf("Shell: Incorrect command: %s\n", tokens[i]);
@@ -266,7 +288,7 @@ char *processecho(char **tokens, int tokenNo)
 	// 0 for loop did not end
 }
 
-void exec(char *command, char **args, int size)
+int exec(char *command, char **args, int size)
 {
 	pid_t pid, wpid;
 	int status;
@@ -287,6 +309,7 @@ void exec(char *command, char **args, int size)
 	else if (pid)
 	{
 		wpid = waitpid(pid, &status, 0);
-		printf("%d reaped \n", wpid);
+		// printf("%d reaped \n", wpid);
 	}
+	return size;
 }

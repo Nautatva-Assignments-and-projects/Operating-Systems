@@ -63,7 +63,7 @@ char **tokenize(char *line)
 	return tokens;
 }
 
-void echo(char **, int);
+char *processecho(char **, int);
 void pwd();
 void exec(char *, char **, int);
 
@@ -118,46 +118,53 @@ int main(int argc, char *argv[])
 			printf("found token %s\n", tokens[i]);
 
 			if (strcmp(tokens[i], "cd") == 0)
-			{
-				chdir(tokens[++i]); // done
+			{ // done
+				chdir(tokens[++i]);
 			}
 
 			else if (strcmp(tokens[i], "pwd") == 0)
-			{
-				exec("pwd", NULL, 0); // done
+			{ // done
+				exec("pwd", NULL, 0);
 			}
 
 			else if (strcmp(tokens[i], "ls") == 0)
-			{
-				char *array[1] = {tokens[++i]};
-				exec("ls", array, 1); // done
+			{ //done
+				if (tokens[i++] != NULL)
+				{
+					char *array[1] = {tokens[i]};
+					exec("ls", array, 1);
+				}
+				else
+				{
+					exec("ls", NULL, 0);
+				}
 			}
 
 			else if (strcmp(tokens[i], "echo") == 0)
-			{
-				char *array[1] = {tokens[++i]};
-				exec("echo", array, 1); // a little left
+			{ //done
+				char *string = processecho(tokens, i);
+				char *array[1] = {string};
+				exec("echo", array, 1);
+				break;
 			}
 
 			else if (strcmp(tokens[i], "sleep") == 0)
 			{
 				i++;
-				// my_sleep(tokens, i);
 				int sleepNo = stoi(tokens[i]);
 				if (sleepNo > MAX_NUM_TOKENS)
 				{
 					printf("Shell: Incorrect command \n");
-					// perror("Sleeping cannot be done for such long period \n");
-					/*What to replace here?????*/
 				}
 				sleep(sleepNo); //think so left
 			}
-			else if (strcmp(tokens[i], "exit") == 0)
-			{
-				exit = 1;
-				break; //done
-			}
 
+			else if (strcmp(tokens[i], "exit") == 0)
+			{ //done
+				exit = 1;
+				break;
+			}
+			
 			else
 			{
 				printf("Shell: Incorrect command: %s\n", tokens[i]);
@@ -203,6 +210,61 @@ int main(int argc, char *argv[])
 // 		perror("error forking");
 // 	}
 // }
+
+char *processecho(char **tokens, int tokenNo)
+{
+
+	int start = 0;
+	int stop = 0;
+	static char word[1024]; //use malloc later part
+	int pointer = 0;
+	int length = 0;
+
+	// tokenNo contains the word echo;
+	for (int i = tokenNo + 1; tokens[i] != NULL; i++)
+	{
+		char *currentWord = tokens[i];
+		for (int j = 0; j < strlen(currentWord); j++)
+		{
+			char readchar = currentWord[j];
+			// Handling encounter with "
+			if (readchar == '"')
+			{
+				// first encounter
+				if (start == 0)
+				{
+					start = 1;
+					continue;
+				}
+				// last encounter
+				else
+				{
+					stop = 1;
+					// word[1024] = length + '0';
+					// printf("\n");
+					word[pointer] = '\0';
+					return word;
+					// last bit is the number of words
+				}
+			}
+			// if immediately, we dont find ", give error
+			else if (start == 0)
+			{
+				return NULL;
+				// error for did not find "
+			}
+			else
+			{
+				word[pointer++] = readchar;
+			}
+		}
+		word[pointer++] = ' ';
+		length++;
+	}
+	word[pointer] = '\0';
+	return word;
+	// 0 for loop did not end
+}
 
 void exec(char *command, char **args, int size)
 {

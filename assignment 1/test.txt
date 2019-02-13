@@ -1,1 +1,4 @@
 echo "hello"
+ls
+echo "work"
+ls -al

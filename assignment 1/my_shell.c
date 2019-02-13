@@ -8,9 +8,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <signal.h>
+
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
+int numberOfParallel = 0;
+pid_t pidarr[64];
+// int numberOfForeground = 0;
+// pid_t foregroundArr[64];
+int numberOfBackground = 0;
+pid_t backgroundArr[64];
 
 // Helper functions
 unsigned int stoi(char *token)
@@ -24,7 +32,7 @@ unsigned int stoi(char *token)
 }
 
 /* Splits the string by space and returns the array of tokens */
-char **tokenize(char *line)
+char **tokenize(char *line, int *parallel, int *background)
 {
 	char **tokens = (char **)malloc(MAX_NUM_TOKENS * sizeof(char *));
 	char *token = (char *)malloc(MAX_TOKEN_SIZE * sizeof(char));
@@ -43,6 +51,14 @@ char **tokenize(char *line)
 				tokens[tokenNo] = (char *)malloc(MAX_TOKEN_SIZE * sizeof(char));
 				strcpy(tokens[tokenNo++], token);
 				tokenIndex = 0;
+				if (strcmp(token, "&&&") == 0)
+				{
+					*parallel = 1;
+				}
+				if (strcmp(token, "&") == 0)
+				{
+					*background = 1;
+				}
 			}
 		}
 		else
@@ -56,14 +72,22 @@ char **tokenize(char *line)
 	return tokens;
 }
 
+void killAll(pid_t[], int);
+
 char *processecho(char **, int);
 void pwd();
-int exec(char *, char **, int);
+int exec(int, int, char *, char **, int);
 
-void my_sleep(char **tokens, int i);
+void my_sleep(int);
+void sighandler()
+{
+	killAll(pidarr, numberOfParallel);
+}
 
 int main(int argc, char *argv[])
 {
+	signal(SIGINT, sighandler);
+
 	char line[MAX_INPUT_SIZE];
 	char **tokens;
 	int i;
@@ -78,10 +102,13 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	int count = 8;
 	int exit = 0;
-	while (count-- && !exit)
+	while (!exit)
 	{
+		int parallel = 0;
+		int background = 0;
+		numberOfParallel = 0;
+
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
 		if (argc == 2)
@@ -98,63 +125,62 @@ int main(int argc, char *argv[])
 			scanf("%[^\n]", line);
 			getchar();
 		}
-		// printf("Command entered: %s\n", line);
 		/* END: TAKING INPUT */
 
 		line[strlen(line)] = '\n'; //terminate with new line
-		tokens = tokenize(line);
+		tokens = tokenize(line, &parallel, &background);
 
 		//do whatever you want with the commands, here we just print them
 
 		for (i = 0; tokens[i] != NULL; i++)
 		{
 			// printf("found token %s\n", tokens[i]);
+			if (strcmp(tokens[i], "&") == 0)
+			{
+				background = 1;
+			}
+			else if (strcmp(tokens[i], "&&") == 0)
+			{
+				continue;
+			}
+			else if (strcmp(tokens[i], "&&&") == 0)
+			{
+				parallel = 1;
+			}
 
-			if (strcmp(tokens[i], "cd") == 0)
+			else if (strcmp(tokens[i], "cd") == 0)
 			{ // done
 				chdir(tokens[++i]);
 			}
 
 			else if (strcmp(tokens[i], "exit") == 0)
 			{ //done
+				killAll(pidarr, numberOfParallel);
+				killAll(backgroundArr, numberOfBackground);
 				exit = 1;
 				break;
 			}
 
-			//
-
-			//
-
-			// problem
 			else if (strcmp(tokens[i], "sleep") == 0)
-			{
+			{ //done
 				i++;
-				int sleepNo = stoi(tokens[i]);
-				if (sleepNo > MAX_NUM_TOKENS)
-				{
-					printf("Shell: Incorrect command \n");
-				}
-				sleep(sleepNo);
+				char *array[1] = {tokens[i]};
+				exec(parallel, background, "sleep", array, 1);
 			}
 
-			//
-
-			//
-
-			// exec waale commands
 			else if (strcmp(tokens[i], "pwd") == 0)
 			{ // done
-				exec("pwd", NULL, 0);
+				exec(parallel, background, "pwd", NULL, 0);
 			}
 
 			else if (strcmp(tokens[i], "date") == 0)
 			{ // done
-				exec("date", NULL, 0);
+				exec(parallel, background, "date", NULL, 0);
 			}
 
 			else if (strcmp(tokens[i], "ps") == 0)
 			{ // done
-				exec("ps", NULL, 0);
+				exec(parallel, background, "ps", NULL, 0);
 			}
 
 			else if (strcmp(tokens[i], "ls") == 0)
@@ -162,11 +188,11 @@ int main(int argc, char *argv[])
 				if (tokens[i++] != NULL)
 				{
 					char *array[1] = {tokens[i]};
-					i += exec("ls", array, 1);
+					i += exec(parallel, background, "ls", array, 1);
 				}
 				else
 				{
-					exec("ls", NULL, 0);
+					exec(parallel, background, "ls", NULL, 0);
 				}
 			}
 
@@ -175,15 +201,15 @@ int main(int argc, char *argv[])
 				if (tokens[i++] != NULL)
 				{
 					char *array[1] = {tokens[i]};
-					i += exec("cat", array, 1);
+					i += exec(parallel, background, "cat", array, 1);
 				}
 			}
 
 			else if (strcmp(tokens[i], "echo") == 0)
-			{ //done - check for size though
+			{ //done - check for size though. return the number of words so to look for tokens
 				char *string = processecho(tokens, i);
 				char *array[1] = {string};
-				exec("echo", array, 1);
+				exec(parallel, background, "echo", array, 1);
 				break;
 			}
 
@@ -199,46 +225,22 @@ int main(int argc, char *argv[])
 			free(tokens[i]);
 		}
 		free(tokens);
+
+		for (size_t i = 0; i < numberOfParallel; i++)
+		{
+			pid_t wpid = waitpid(pidarr[i], 0, 0);
+			numberOfParallel--;
+			pidarr[i] = 0;
+		}
 	}
 	return 0;
 }
 
-// void my_sleep(char **tokens, int i)
-// {
-// 	pid_t pid, wpid;
-// 	int status;
-
-// 	pid = fork();
-// 	if (pid == 0)
-// 	{
-// 		int sleepNo = stoi(tokens[i + 1]);
-// 		if (sleepNo > MAX_NUM_TOKENS)
-// 		{
-// 			printf("Shell: Incorrect command \n");
-// 			// perror("Sleeping cannot be done for such long period \n");
-// 			/*What to replace here?????*/
-// 		}
-// 		sleep(sleepNo);
-// 		exit(EXIT_FAILURE);
-// 	}
-// 	else if (pid)
-// 	{
-// 		wpid = waitpid(pid, &status, 0);
-// 		printf("%d reaped \n", wpid);
-// 	}
-
-// 	else if (pid < 0)
-// 	{
-// 		perror("error forking");
-// 	}
-// }
-
 char *processecho(char **tokens, int tokenNo)
 {
-
 	int start = 0;
 	int stop = 0;
-	static char word[1024]; //use malloc later part
+	static char word[1024];
 	int pointer = 0;
 	int length = 0;
 
@@ -262,8 +264,6 @@ char *processecho(char **tokens, int tokenNo)
 				else
 				{
 					stop = 1;
-					// word[1024] = length + '0';
-					// printf("\n");
 					word[pointer] = '\0';
 					return word;
 					// last bit is the number of words
@@ -288,12 +288,13 @@ char *processecho(char **tokens, int tokenNo)
 	// 0 for loop did not end
 }
 
-int exec(char *command, char **args, int size)
+int exec(int parallel, int background, char *command, char **args, int size)
 {
 	pid_t pid, wpid;
 	int status;
 	int i;
 	char *new_arg[size + 2];
+
 	new_arg[0] = command;
 	for (i = 0; i < size; i++)
 	{
@@ -308,8 +309,32 @@ int exec(char *command, char **args, int size)
 	}
 	else if (pid)
 	{
-		wpid = waitpid(pid, &status, 0);
-		// printf("%d reaped \n", wpid);
+		if (parallel == 1)
+		{ // if parallel
+			pidarr[numberOfParallel] = pid;
+			numberOfParallel++;
+
+			setpgid(pid, getpid());
+		}
+		else if (background == 1)
+		{ // if background
+			backgroundArr[numberOfBackground] = pid;
+			numberOfBackground++;
+		}
+		if (parallel != 1 && background != 1)
+		{ // if blocking, reap it before going ahead
+			wpid = waitpid(pid, &status, 0);
+		}
+		
 	}
 	return size;
+}
+
+void killAll(pid_t processes[], int number)
+{
+	for (int i = 0; i < number; i++)
+	{
+		kill(processes[i], SIGKILL);
+		printf("killed %d \n", processes[i]);
+	}
 }

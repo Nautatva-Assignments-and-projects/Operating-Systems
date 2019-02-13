@@ -74,7 +74,7 @@ char **tokenize(char *line, int *parallel, int *background)
 
 void killAll(pid_t[], int);
 
-char *processecho(char **, int);
+char *processecho(char **, int, int *);
 void pwd();
 int exec(int, int, char *, char **, int);
 
@@ -206,11 +206,12 @@ int main(int argc, char *argv[])
 			}
 
 			else if (strcmp(tokens[i], "echo") == 0)
-			{ //done - check for size though. return the number of words so to look for tokens
-				char *string = processecho(tokens, i);
+			{ //done
+				int length = 0;
+				char *string = processecho(tokens, i, &length);
 				char *array[1] = {string};
 				exec(parallel, background, "echo", array, 1);
-				break;
+				i += length;
 			}
 
 			else
@@ -236,7 +237,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-char *processecho(char **tokens, int tokenNo)
+char *processecho(char **tokens, int tokenNo, int *number)
 {
 	int start = 0;
 	int stop = 0;
@@ -265,6 +266,7 @@ char *processecho(char **tokens, int tokenNo)
 				{
 					stop = 1;
 					word[pointer] = '\0';
+					*number = length + 1;
 					return word;
 					// last bit is the number of words
 				}
@@ -284,6 +286,7 @@ char *processecho(char **tokens, int tokenNo)
 		length++;
 	}
 	word[pointer] = '\0';
+	*number = length + 1;
 	return word;
 	// 0 for loop did not end
 }
@@ -325,7 +328,6 @@ int exec(int parallel, int background, char *command, char **args, int size)
 		{ // if blocking, reap it before going ahead
 			wpid = waitpid(pid, &status, 0);
 		}
-		
 	}
 	return size;
 }

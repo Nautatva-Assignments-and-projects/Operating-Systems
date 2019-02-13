@@ -63,12 +63,10 @@ char **tokenize(char *line)
 	return tokens;
 }
 
-//
+void echo(char **, int);
+void pwd();
+void exec(char *, char **, int);
 
-int echo(char **tokens, int tokenNo);
-int pwd();
-void ls();
-int cd();
 void my_sleep(char **tokens, int i);
 
 int main(int argc, char *argv[])
@@ -88,7 +86,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	int count = 8;
-	while (count--)
+	int exit = 0;
+	while (count-- && !exit)
 	{
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
@@ -120,13 +119,27 @@ int main(int argc, char *argv[])
 
 			if (strcmp(tokens[i], "cd") == 0)
 			{
-				i = cd(tokens[i], i);
+				chdir(tokens[++i]); // done
 			}
+
+			else if (strcmp(tokens[i], "pwd") == 0)
+			{
+				exec("pwd", NULL, 0); // done
+			}
+
+			else if (strcmp(tokens[i], "ls") == 0)
+			{
+				char *array[1] = {tokens[++i]};
+				exec("ls", array, 1); // done
+			}
+
 			else if (strcmp(tokens[i], "echo") == 0)
 			{
-				i = echo(tokens, i);
+				char *array[1] = {tokens[++i]};
+				exec("echo", array, 1); // a little left
 			}
-			if (strcmp(tokens[i], "sleep") == 0)
+
+			else if (strcmp(tokens[i], "sleep") == 0)
 			{
 				i++;
 				// my_sleep(tokens, i);
@@ -137,11 +150,17 @@ int main(int argc, char *argv[])
 					// perror("Sleeping cannot be done for such long period \n");
 					/*What to replace here?????*/
 				}
-				sleep(sleepNo);
+				sleep(sleepNo); //think so left
 			}
+			else if (strcmp(tokens[i], "exit") == 0)
+			{
+				exit = 1;
+				break; //done
+			}
+
 			else
 			{
-				printf("Shell: Incorrect command \n");
+				printf("Shell: Incorrect command: %s\n", tokens[i]);
 			}
 		}
 
@@ -153,133 +172,6 @@ int main(int argc, char *argv[])
 		free(tokens);
 	}
 	return 0;
-}
-
-int echo(char **tokens, int tokenNo)
-{
-	pid_t pid, wpid;
-	int status;
-	int i;
-
-	pid = fork();
-	if (pid == 0)
-	{
-		int start = 0;
-		int stop = 0;
-		// tokenNo contains the word echo;
-		for (i = tokenNo + 1; tokens[i] != NULL; i++)
-		{
-			char *currentWord = tokens[i];
-			for (int j = 0; j < strlen(currentWord); j++)
-			{
-				char readchar = currentWord[j];
-				// Handling encounter with "
-				if (readchar == '"')
-				{
-					// first encounter
-					if (start == 0)
-					{
-						start = 1;
-						continue;
-					}
-					// last encounter
-					else
-					{
-						stop = 1;
-						printf("\n");
-						exit(EXIT_SUCCESS);
-						// i returns the word index last echoed
-					}
-				}
-				// if immediately, we dont find ", give error
-				else if (start == 0)
-				{
-					exit(EXIT_FAILURE);
-					// error for did not find "
-				}
-				else
-				{
-					printf("%c", readchar);
-				}
-			}
-			printf(" ");
-		}
-		printf("\n");
-		// did not end with "
-		exit(EXIT_FAILURE);
-	}
-	else if (pid < 0)
-	{
-		perror("error forking");
-	}
-	else
-	{
-		printf("%d \n", pid);
-		// do
-		// {
-		// 	wpid = waitpid(pid, &status, WUNTRACED);
-		// } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-	}
-	return i;
-}
-
-// function to check the current working directory
-int pwd()
-{
-	char cwd[MAX_INPUT_SIZE];
-	if (getcwd(cwd, sizeof(cwd)) != NULL)
-	{
-		printf("%s\n", cwd);
-	}
-	else
-	{
-		perror("getcwd() error");
-		return -1;
-	}
-	return 0;
-}
-
-void ls()
-{
-	struct dirent *de; // Pointer for directory entry
-
-	// opendir() returns a pointer of DIR type.
-	DIR *dr = opendir(".");
-
-	if (dr == NULL) // opendir returns NULL if couldn't open directory
-	{
-
-		printf("Shell: Incorrect command \n");
-		// printf("Could not open current directory");
-		return;
-	}
-
-	// Refer http://pubs.opengroup.org/onlinepubs/7990989775/xsh/readdir.html
-	// for readdir()
-	while ((de = readdir(dr)) != NULL)
-		printf("%s\n", de->d_name);
-
-	closedir(dr);
-	printf("is using direct.h header okay??? \n");
-	return;
-}
-
-int cd(char **tokens, int i)
-{
-
-	if (chdir(tokens[i]) == -1)
-	{
-		printf("Shell: Incorrect command \n");
-		// perror("no such directory \n");
-		/*What to replace here????? */
-	}
-	else
-	{
-		// success
-		pwd();
-		/*What to replace here????? */
-	}
-	return i + 2;
 }
 
 // void my_sleep(char **tokens, int i)
@@ -311,3 +203,28 @@ int cd(char **tokens, int i)
 // 		perror("error forking");
 // 	}
 // }
+
+void exec(char *command, char **args, int size)
+{
+	pid_t pid, wpid;
+	int status;
+	int i;
+	char *new_arg[size + 2];
+	new_arg[0] = command;
+	for (i = 0; i < size; i++)
+	{
+		new_arg[i + 1] = args[i];
+	}
+	new_arg[i + 1] = NULL;
+
+	pid = fork();
+	if (pid == 0)
+	{
+		execvp(command, new_arg);
+	}
+	else if (pid)
+	{
+		wpid = waitpid(pid, &status, 0);
+		printf("%d reaped \n", wpid);
+	}
+}

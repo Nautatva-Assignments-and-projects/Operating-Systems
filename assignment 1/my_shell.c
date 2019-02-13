@@ -130,11 +130,9 @@ int main(int argc, char *argv[])
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line, &parallel, &background);
 
-		//do whatever you want with the commands, here we just print them
-
 		for (i = 0; tokens[i] != NULL; i++)
 		{
-			// printf("found token %s\n", tokens[i]);
+
 			if (strcmp(tokens[i], "&") == 0)
 			{
 				background = 1;
@@ -337,6 +335,5 @@ void killAll(pid_t processes[], int number)
 	for (int i = 0; i < number; i++)
 	{
 		kill(processes[i], SIGKILL);
-		printf("killed %d \n", processes[i]);
 	}
 }

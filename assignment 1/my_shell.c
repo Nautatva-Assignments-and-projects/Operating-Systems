@@ -1,7 +1,3 @@
-/*What to replace here?????
- *questions to be asked in class have '???'
-*/
-
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -126,8 +122,8 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 	}
-	int exit = 0;
-	while (!exit)
+	int ex = 0;
+	while (!ex)
 	{
 		int parallel = 0;
 		int background = 0;
@@ -179,7 +175,8 @@ int main(int argc, char *argv[])
 			{ //done
 				killAll(pidarr, numberOfParallel);
 				killAll(backgroundArr, numberOfBackground);
-				exit = 1;
+				ex = 1;
+				exit(EXIT_SUCCESS);
 				break;
 			}
 

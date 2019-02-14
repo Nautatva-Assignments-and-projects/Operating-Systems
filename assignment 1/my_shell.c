@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <signal.h>
+#include <sys/wait.h>
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
@@ -206,10 +207,23 @@ int main(int argc, char *argv[])
 
 			else if (strcmp(tokens[i], "ls") == 0)
 			{ //done
-				if (tokens[i++] != NULL)
+				char *check = NULL;
+				if (tokens[i + 1] != NULL)
 				{
-					char *array[1] = {tokens[i]};
-					i += exec(parallel, background, "ls", array, 1);
+					check = tokens[i + 1];
+				}
+
+				if (check != NULL)
+				{
+					if (strcmp(check, "&") != 0 && strcmp(check, "&&") != 0 && strcmp(check, "&&&") != 0)
+					{
+						char *array[1] = {check};
+						i += exec(parallel, background, "ls", array, 1);
+					}
+					else
+					{
+						exec(parallel, background, "ls", NULL, 0);
+					}
 				}
 				else
 				{
@@ -219,10 +233,27 @@ int main(int argc, char *argv[])
 
 			else if (strcmp(tokens[i], "cat") == 0)
 			{ //done
-				if (tokens[i++] != NULL)
+				char *check = NULL;
+				if (tokens[i + 1] != NULL)
 				{
-					char *array[1] = {tokens[i]};
-					i += exec(parallel, background, "cat", array, 1);
+					check = tokens[i + 1];
+				}
+
+				if (check != NULL)
+				{
+					if (strcmp(check, "&") != 0 && strcmp(check, "&&") != 0 && strcmp(check, "&&&") != 0)
+					{
+						char *array[1] = {check};
+						i += exec(parallel, background, "cat", array, 1);
+					}
+					else
+					{
+						exec(parallel, background, "cat", NULL, 0);
+					}
+				}
+				else
+				{
+					exec(parallel, background, "ls", NULL, 0);
 				}
 			}
 
@@ -237,7 +268,7 @@ int main(int argc, char *argv[])
 
 			else
 			{
-				printf("Shell: Incorrect command: %s\n", tokens[i]);
+				exec(parallel, background, tokens[i], NULL, 0);
 			}
 		}
 
@@ -329,7 +360,11 @@ int exec(int parallel, int background, char *command, char **args, int size)
 	pid = fork();
 	if (pid == 0)
 	{
-		execvp(command, new_arg);
+		if (execvp(command, new_arg) < 0)
+		{
+			printf("Shell: Incorrect command \n");
+			exit(EXIT_FAILURE);
+		};
 	}
 	else if (pid)
 	{
@@ -337,8 +372,6 @@ int exec(int parallel, int background, char *command, char **args, int size)
 		{ // if parallel
 			pidarr[numberOfParallel] = pid;
 			numberOfParallel++;
-
-			setpgid(pid, getpid());
 		}
 		else if (background == 1)
 		{ // if background

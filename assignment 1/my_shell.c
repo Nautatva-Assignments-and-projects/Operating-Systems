@@ -84,9 +84,32 @@ void sighandler()
 	killAll(pidarr, numberOfParallel);
 }
 
+void backgroundHandler()
+{
+	if (numberOfBackground != 0)
+	{
+		int wstat;
+		pid_t pid;
+		pid = wait3(&wstat, WNOHANG, (struct rusage *)NULL);
+
+		for (size_t i = 0; i < numberOfBackground; i++)
+		{
+			if (backgroundArr[i] == pid)
+			{
+				numberOfBackground--;
+				printf("Shell: Background process finished \n");
+				//swapping the last background process with removed arr
+				backgroundArr[i] = backgroundArr[numberOfBackground];
+				break;
+			}
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	signal(SIGINT, sighandler);
+	signal(SIGCHLD, backgroundHandler);
 
 	char line[MAX_INPUT_SIZE];
 	char **tokens;

@@ -71,7 +71,7 @@ char **tokenize(char *line, int *parallel, int *background)
 
 void killAll(pid_t[], int);
 
-char *processecho(char **, int, int *);
+// char *processecho(char **, int, int *);
 void pwd();
 int exec(int, int, char *, char **, int);
 
@@ -149,21 +149,26 @@ int main(int argc, char *argv[])
 
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line, &parallel, &background);
-
+		char *comm[64];
+		int commLen = 0;
 		for (i = 0; tokens[i] != NULL; i++)
 		{
-
 			if (strcmp(tokens[i], "&") == 0)
 			{
 				background = 1;
+				exec(parallel, background, comm[0], comm, commLen);
+				commLen = 0;
 			}
 			else if (strcmp(tokens[i], "&&") == 0)
 			{
-				continue;
+				exec(parallel, background, comm[0], comm, commLen);
+				commLen = 0;
 			}
 			else if (strcmp(tokens[i], "&&&") == 0)
 			{
 				parallel = 1;
+				exec(parallel, background, comm[0], comm, commLen);
+				commLen = 0;
 			}
 
 			else if (strcmp(tokens[i], "cd") == 0)
@@ -176,98 +181,18 @@ int main(int argc, char *argv[])
 				killAll(pidarr, numberOfParallel);
 				killAll(backgroundArr, numberOfBackground);
 				ex = 1;
+				printf("Shell: Goodbye. \n");
 				exit(EXIT_SUCCESS);
 				break;
 			}
 
-			else if (strcmp(tokens[i], "sleep") == 0)
-			{ //done
-				i++;
-				char *array[1] = {tokens[i]};
-				exec(parallel, background, "sleep", array, 1);
-			}
-
-			else if (strcmp(tokens[i], "pwd") == 0)
-			{ // done
-				exec(parallel, background, "pwd", NULL, 0);
-			}
-
-			else if (strcmp(tokens[i], "date") == 0)
-			{ // done
-				exec(parallel, background, "date", NULL, 0);
-			}
-
-			else if (strcmp(tokens[i], "ps") == 0)
-			{ // done
-				exec(parallel, background, "ps", NULL, 0);
-			}
-
-			else if (strcmp(tokens[i], "ls") == 0)
-			{ //done
-				char *check = NULL;
-				if (tokens[i + 1] != NULL)
-				{
-					check = tokens[i + 1];
-				}
-
-				if (check != NULL)
-				{
-					if (strcmp(check, "&") != 0 && strcmp(check, "&&") != 0 && strcmp(check, "&&&") != 0)
-					{
-						char *array[1] = {check};
-						i += exec(parallel, background, "ls", array, 1);
-					}
-					else
-					{
-						exec(parallel, background, "ls", NULL, 0);
-					}
-				}
-				else
-				{
-					exec(parallel, background, "ls", NULL, 0);
-				}
-			}
-
-			else if (strcmp(tokens[i], "cat") == 0)
-			{ //done
-				char *check = NULL;
-				if (tokens[i + 1] != NULL)
-				{
-					check = tokens[i + 1];
-				}
-
-				if (check != NULL)
-				{
-					if (strcmp(check, "&") != 0 && strcmp(check, "&&") != 0 && strcmp(check, "&&&") != 0)
-					{
-						char *array[1] = {check};
-						i += exec(parallel, background, "cat", array, 1);
-					}
-					else
-					{
-						exec(parallel, background, "cat", NULL, 0);
-					}
-				}
-				else
-				{
-					exec(parallel, background, "ls", NULL, 0);
-				}
-			}
-
-			else if (strcmp(tokens[i], "echo") == 0)
-			{ //done
-				int length = 0;
-				char *string = processecho(tokens, i, &length);
-				char *array[1] = {string};
-				exec(parallel, background, "echo", array, 1);
-				i += length;
-			}
-
 			else
 			{
-				exec(parallel, background, tokens[i], NULL, 0);
+				comm[commLen] = tokens[i];
+				commLen++;
 			}
 		}
+		exec(parallel, background, comm[0], comm, commLen);
 
 		// Freeing the allocated memory
 		for (i = 0; tokens[i] != NULL; i++)
@@ -278,7 +203,7 @@ int main(int argc, char *argv[])
 
 		for (size_t i = 0; i < numberOfParallel; i++)
 		{
-			pid_t wpid = waitpid(pidarr[i], 0, 0);
+			pid_t wpid = wait(0);
 			numberOfParallel--;
 			pidarr[i] = 0;
 		}
@@ -286,73 +211,20 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-char *processecho(char **tokens, int tokenNo, int *number)
-{
-	int start = 0;
-	int stop = 0;
-	static char word[1024];
-	int pointer = 0;
-	int length = 0;
-
-	// tokenNo contains the word echo;
-	for (int i = tokenNo + 1; tokens[i] != NULL; i++)
-	{
-		char *currentWord = tokens[i];
-		for (int j = 0; j < strlen(currentWord); j++)
-		{
-			char readchar = currentWord[j];
-			// Handling encounter with "
-			if (readchar == '"')
-			{
-				// first encounter
-				if (start == 0)
-				{
-					start = 1;
-					continue;
-				}
-				// last encounter
-				else
-				{
-					stop = 1;
-					word[pointer] = '\0';
-					*number = length + 1;
-					return word;
-					// last bit is the number of words
-				}
-			}
-			// if immediately, we dont find ", give error
-			else if (start == 0)
-			{
-				return NULL;
-				// error for did not find "
-			}
-			else
-			{
-				word[pointer++] = readchar;
-			}
-		}
-		word[pointer++] = ' ';
-		length++;
-	}
-	word[pointer] = '\0';
-	*number = length + 1;
-	return word;
-	// 0 for loop did not end
-}
-
 int exec(int parallel, int background, char *command, char **args, int size)
 {
 	pid_t pid, wpid;
 	int status;
 	int i;
-	char *new_arg[size + 2];
+	char *new_arg[size + 1];
 
-	new_arg[0] = command;
+	// new_arg[0] = command;
 	for (i = 0; i < size; i++)
 	{
-		new_arg[i + 1] = args[i];
+		new_arg[i] = args[i];
 	}
-	new_arg[i + 1] = NULL;
+
+	new_arg[size] = NULL;
 
 	pid = fork();
 	if (pid == 0)
@@ -388,5 +260,6 @@ void killAll(pid_t processes[], int number)
 	for (int i = 0; i < number; i++)
 	{
 		kill(processes[i], SIGKILL);
+		wait(0);
 	}
 }

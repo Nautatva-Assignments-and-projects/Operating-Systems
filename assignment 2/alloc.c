@@ -7,9 +7,10 @@
 
 int init()
 {
-	// Write your code below
-
-  
+	MemAddress = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, -1, 0);
+	sizeLeft = PAGESIZE;
+	// currentAddress = MemAddress;
+	return 0;
 }
 
 /* optional cleanup with munmap() call
@@ -17,10 +18,12 @@ int init()
 */
 int cleanup()
 {
-
-	// Write your code below
-
-  
+	int mun = munmap(MemAddress, PAGESIZE);
+	if (mun == 0)
+	{
+		sizeLeft = 0;
+	}
+	return mun;
 }
 
 /* Function to allocate memory of given size
@@ -30,18 +33,44 @@ int cleanup()
 */
 char *alloc(int bufSize)
 {
-	// write your code below
+	int sizeTobeGiven;
+	if (bufSize % MINALLOC == 0)
+	{
+		sizeTobeGiven = bufSize;
+	}
+	else
+	{
+		sizeTobeGiven = ((bufSize % MINALLOC) + 1) * MINALLOC;
+	}
 
-  
+	MaxFreeSpace ds = findMaxFreespace();
+	if (sizeTobeGiven > ds.space)
+	{
+		return NULL;
+	}
 
+	int tempPosition = ds.position;
+	Heads[tempPosition].size = sizeTobeGiven;
+	Heads[tempPosition].address = MemAddress + ds.position * MINALLOC;
+	while (sizeTobeGiven)
+	{
+		myfree[tempPosition++] = 0;
+		sizeTobeGiven = sizeTobeGiven - MINALLOC;
+	}
+
+	return MemAddress + ds.position * MINALLOC;
 }
-
 
 /* Function to free the memory
 * argument: takes the starting address of an allocated buffer
 */
 void dealloc(char *memAddr)
 {
-	// write your code below
-
+	int size = findSize(memAddr);
+	int freeIndex = (memAddr - MemAddress) / MINALLOC;
+	while (size)
+	{
+		myfree[freeIndex++] = 0;
+		size = size - MINALLOC;
+	}
 }
